@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MemeScout — Solana Meme Coin Scanner</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1020;--panel:#141c30;--muted:#aab4cc;--line:#2a3550;--accent:#7c9cff;--green:#65d6a3;--yellow:#ffd166;--red:#ff7777}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(160deg,#0b1020,#111a2d);color:#f4f6ff;font:15px system-ui,-apple-system,Segoe UI,sans-serif}
+header{padding:24px 16px 18px;max-width:980px;margin:auto}h1{margin:0;font-size:28px;letter-spacing:-.6px}header p{color:var(--muted);margin:7px 0 0;line-height:1.45}
+main{max-width:980px;margin:auto;padding:0 14px 32px}.panel{background:rgba(20,28,48,.96);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 8px 28px #0002}
+h2{font-size:17px;margin:0 0 12px}.row{display:flex;gap:8px;flex-wrap:wrap}input,select,button{font:inherit;border-radius:10px;border:1px solid var(--line);padding:12px;background:#0d1426;color:#f4f6ff}input{flex:1;min-width:180px}button{background:var(--accent);border-color:var(--accent);color:#091027;font-weight:750;cursor:pointer}button.secondary{background:#202b45;border-color:#34415f;color:#f4f6ff}button:disabled{opacity:.5}
+.small{font-size:12px;color:var(--muted);line-height:1.5}.status{margin-top:10px;color:var(--muted);min-height:20px}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:9px}.metric{background:#0d1426;border:1px solid var(--line);border-radius:12px;padding:12px}.metric b{display:block;font-size:20px;margin-top:5px}.metric span{font-size:12px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:10px 7px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--muted);font-weight:600}.token{font-weight:750}.sub{font-size:11px;color:var(--muted);word-break:break-all}.pill{display:inline-block;padding:4px 7px;border-radius:99px;font-size:11px;font-weight:750}.low{background:#153e34;color:var(--green)}.med{background:#49391b;color:var(--yellow)}.high{background:#4a222c;color:var(--red)}a{color:#a9bdff}.hidden{display:none}.tokenrow{cursor:pointer}.tokenrow:hover{background:#1a2540}.notice{border-left:3px solid var(--yellow);padding:9px 12px;background:#282419;border-radius:6px;color:#f4dfaa;font-size:12px;line-height:1.5}
+@media(max-width:600px){h1{font-size:24px}.panel{padding:13px}table{font-size:12px}th,td{padding:8px 4px}.hide-mobile{display:none}}
+</style>
+</head>
+<body>
+<header>
+<h1>🛰️ MemeScout</h1>
+<p>Solana Meme Coin Scanner · prototipe gratis untuk riset awal token</p>
+</header>
+<main>
+<section class="panel">
+<h2>Temukan token</h2>
+<div class="row">
+<input id="query" placeholder="Cari nama/simbol atau tempel contract address" autocomplete="off">
+<button id="searchBtn">Analisis</button>
+</div>
+<div class="row" style="margin-top:9px">
+<button class="secondary" id="trendingBtn">Muat token profil terbaru</button>
+<select id="minLiq" aria-label="Likuiditas minimum">
+<option value="0">Likuiditas: semua</option><option value="5000">Min $5.000</option><option value="10000">Min $10.000</option><option value="25000">Min $25.000</option><option value="50000">Min $50.000</option>
+</select>
+<select id="sortBy" aria-label="Urutkan">
+<option value="score">Urutkan: skor awal</option><option value="liquidity">Likuiditas terbesar</option><option value="volume">Volume 24 jam</option><option value="change">Perubahan 24 jam</option>
+</select>
+</div>
+<div id="status" class="status">Siap. Cari token atau muat profil terbaru.</div>
+<p class="small">Sumber data pasar: DexScreener API publik. Data dapat terlambat/tidak lengkap; skor bukan prediksi harga.</p>
+</section>
+<section class="panel">
+<h2>Ringkasan hasil</h2>
+<div class="cards">
+<div class="metric"><span>Token ditampilkan</span><b id="count">0</b></div>
+<div class="metric"><span>Likuiditas median</span><b id="median">$—</b></div>
+<div class="metric"><span>Risiko tinggi</span><b id="highrisk">0</b></div>
+<div class="metric"><span>Pembaruan terakhir</span><b id="updated" style="font-size:15px">—</b></div>
+</div>
+</section>
+<section class="panel">
+<h2>Daftar token</h2>
+<div style="overflow-x:auto">
+<table><thead><tr><th>Token</th><th>Harga</th><th>Likuiditas</th><th class="hide-mobile">Volume 24j</th><th>Skor</th><th>Risiko</th></tr></thead>
+<tbody id="results"><tr><td colspan="6" class="small">Belum ada hasil. Gunakan pencarian di atas.</td></tr></tbody></table>
+</div>
+</section>
+<section class="panel hidden" id="detailPanel">
+<div class="row" style="justify-content:space-between;align-items:center"><h2 id="detailTitle">Detail token</h2><button class="secondary" id="closeDetail">Tutup</button></div>
+<div id="detailBody"></div>
+</section>
+<section class="panel">
+<h2>Cara membaca skor</h2>
+<div class="small">Skor 0–100 adalah penyaring awal berbasis data pasar yang tersedia: likuiditas, volume dibanding likuiditas, aktivitas transaksi, usia pool, dan perubahan harga. Skor tinggi bukan jaminan token aman atau akan naik.</div>
+<div class="notice" style="margin-top:12px"><b>Peringatan:</b> prototipe ini belum memeriksa keamanan kontrak secara menyeluruh, status mint/freeze authority, konsentrasi holder on-chain, atau apakah likuiditas terkunci. Jangan membeli hanya berdasarkan skor. Meme coin bisa kehilangan hampir seluruh nilainya.</div>
+</section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+let pairs=[];
+const fmt=(n)=>{if(n==null||!Number.isFinite(Number(n)))return '—';n=Number(n);if(n>=1e9)return '$'+(n/1e9).toFixed(2)+'B';if(n>=1e6)return '$'+(n/1e6).toFixed(2)+'M';if(n>=1e3)return '$'+(n/1e3).toFixed(1)+'K';return '$'+n.toFixed(n<1?6:2)};
+const num=n=>Number(n)||0;
+const price=n=>{n=Number(n);if(!Number.isFinite(n))return '—';if(n>=1)return '$'+n.toLocaleString('en-US',{maximumFractionDigits:4});if(n>=.01)return '$'+n.toFixed(4);return '$'+n.toPrecision(4)};
+const ageHours=p=>p.pairCreatedAt?Math.max(0,(Date.now()-p.pairCreatedAt)/3600000):null;
+function risk(p){let flags=[];let liq=num(p.liquidity?.usd),vol=num(p.volume?.h24),buys=num(p.txns?.h24?.buys),sells=num(p.txns?.h24?.sells),age=ageHours(p);if(liq<5000)flags.push('likuiditas sangat rendah');else if(liq<15000)flags.push('likuiditas rendah');if(vol>0&&liq>0&&vol/liq>15)flags.push('volume ekstrem vs likuiditas');if(buys+sells>0&&sells/(buys+sells)>.75)flags.push('tekanan jual tinggi');if(age!==null&&age<2)flags.push('pool sangat baru');if(!p.priceUsd)flags.push('harga tidak tersedia');let level=flags.some(x=>x.includes('sangat rendah')||x.includes('ekstrem')||x.includes('sangat baru'))?'TINGGI':flags.length>=2?'TINGGI':flags.length?'SEDANG':'BELUM JELAS';return {flags,level}}
+function score(p){let s=0,liq=num(p.liquidity?.usd),vol=num(p.volume?.h24),tx=num(p.txns?.h24?.buys)+num(p.txns?.h24?.sells),age=ageHours(p);s+=Math.min(30,liq/1000);s+=Math.min(25,vol/2000);s+=Math.min(20,tx/10);if(age!==null)s+=Math.min(15,age/4);let ch=num(p.priceChange?.h24);s+=Math.max(0,Math.min(10,5+ch/5));return Math.round(Math.max(0,Math.min(100,s)))}
+function badge(level){return `<span class="pill ${level==='TINGGI'?'high':level==='SEDANG'?'med':'low'}">${level}</span>`}
+function cleanPairs(arr){const map=new Map();for(const p of arr||[]){if(p.chainId!=='solana'||!p.baseToken)continue;const key=p.baseToken.address;if(!map.has(key)||num(p.liquidity?.usd)>num(map.get(key).liquidity?.usd))map.set(key,p)}return [...map.values()]}
+function sortFilter(){const min=Number($('minLiq').value),sort=$('sortBy').value;let a=pairs.filter(p=>num(p.liquidity?.usd)>=min);a.sort((x,y)=>sort==='liquidity'?num(y.liquidity?.usd)-num(x.liquidity?.usd):sort==='volume'?num(y.volume?.h24)-num(x.volume?.h24):sort==='change'?num(y.priceChange?.h24)-num(x.priceChange?.h24):score(y)-score(x));render(a)}
+function render(arr){$('count').textContent=arr.length;$('highrisk').textContent=arr.filter(p=>risk(p).level==='TINGGI').length;let ls=arr.map(p=>num(p.liquidity?.usd)).sort((a,b)=>a-b);$('median').textContent=ls.length?fmt(ls[Math.floor(ls.length/2)]):'$—';$('updated').textContent=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});$('results').innerHTML=arr.length?arr.slice(0,100).map((p,i)=>{let r=risk(p);return `<tr class="tokenrow" data-addr="${p.baseToken.address}"><td><div class="token">${esc(p.baseToken.symbol||'?')} · ${esc(p.baseToken.name||'Unknown')}</div><div class="sub">${esc(p.baseToken.address)}</div></td><td>${price(p.priceUsd)}<div class="sub">${num(p.priceChange?.h24)>=0?'+':''}${num(p.priceChange?.h24).toFixed(1)}%</div></td><td>${fmt(p.liquidity?.usd)}</td><td class="hide-mobile">${fmt(p.volume?.h24)}</td><td><b>${score(p)}</b>/100</td><td>${badge(r.level)}</td></tr>`}).join(''):`<tr><td colspan="6" class="small">Tidak ada token yang cocok dengan filter.</td></tr>`;document.querySelectorAll('.tokenrow').forEach(tr=>tr.onclick=()=>detail(tr.dataset.addr))}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+async function search(){let q=$('query').value.trim();if(!q){$('status').textContent='Masukkan nama, simbol, atau contract address.';return}await load(`https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(q)}`,'Mencari token...')}
+async function load(url,msg){$('status').textContent=msg;$('searchBtn').disabled=true;$('trendingBtn').disabled=true;try{const res=await fetch(url);if(!res.ok)throw Error('API merespons '+res.status);const data=await res.json();let arr=Array.isArray(data)?data:(data.pairs||[]);pairs=cleanPairs(arr);sortFilter();$('status').textContent=`Berhasil memuat ${pairs.length} pasangan/token Solana. Klik baris untuk detail.`}catch(e){$('status').textContent='Gagal memuat data: '+e.message+'. Coba lagi nanti atau buka DexScreener langsung.'}finally{$('searchBtn').disabled=false;$('trendingBtn').disabled=false}}
+async function trending(){await load('https://api.dexscreener.com/token-profiles/latest/v1','Memuat profil token terbaru...')}
+async function detail(addr){const p=pairs.find(x=>x.baseToken.address===addr);if(!p)return;const r=risk(p);$('detailPanel').classList.remove('hidden');$('detailTitle').textContent=(p.baseToken.symbol||'Token')+' — Detail';$('detailBody').innerHTML=`<div class="cards"><div class="metric"><span>Harga USD</span><b>${price(p.priceUsd)}</b></div><div class="metric"><span>Kapitalisasi / FDV</span><b>${fmt(p.marketCap||p.fdv)}</b></div><div class="metric"><span>Likuiditas</span><b>${fmt(p.liquidity?.usd)}</b></div><div class="metric"><span>Volume 24 jam</span><b>${fmt(p.volume?.h24)}</b></div><div class="metric"><span>Transaksi 24 jam</span><b>${num(p.txns?.h24?.buys)+num(p.txns?.h24?.sells).toLocaleString('id-ID')}</b></div><div class="metric"><span>Usia pool</span><b>${ageHours(p)===null?'—':ageHours(p)<24?ageHours(p).toFixed(1)+' jam':(ageHours(p)/24).toFixed(1)+' hari'}</b></div></div><p>Skor awal: <b>${score(p)}/100</b> · Risiko: ${badge(r.level)}</p><p class="small">Alamat kontrak: <br>${esc(addr)}</p><p class="small">DEX: ${esc(p.dexId||'—')} · Pair dibuat: ${p.pairCreatedAt?new Date(p.pairCreatedAt).toLocaleString('id-ID'):'tidak tersedia'}</p><p>${r.flags.length?'Indikator yang perlu diperiksa: '+r.flags.map(esc).join(', '):'Tidak ada indikator sederhana yang terpicu; ini bukan berarti token aman.'}</p><p><a href="${p.url}" target="_blank" rel="noopener">Buka pasangan di DexScreener ↗</a></p>`;window.scrollTo({top:$('detailPanel').offsetTop-10,behavior:'smooth'})}
+$('searchBtn').onclick=search;$('query').addEventListener('keydown',e=>{if(e.key==='Enter')search()});$('trendingBtn').onclick=trending;$('minLiq').onchange=sortFilter;$('sortBy').onchange=sortFilter;$('closeDetail').onclick=()=>$('detailPanel').classList.add('hidden');
+</script>
+</body>
+</html>
